@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple CRUD App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-hero">
+        <div class="hero-content">
+            <p class="eyebrow">Inventory demo</p>
+            <h1>Manage your items with zero setup</h1>
+            <p class="lede">Create, read, and delete entries instantly. The UI auto-refreshes, shows empty states, and feels at home on any screen size.</p>
+        </div>
+    </header>
+
+    <main class="app-shell" aria-live="polite">
+        <section class="panel card form-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Add item</h2>
+                    <p>Keep your list tidy with one-click captures.</p>
+                </div>
+            </div>
+            <form id="itemForm" class="item-form" novalidate>
+                <label for="itemName">Item name</label>
+                <div class="input-row">
+                    <input type="text" id="itemName" name="name" placeholder="Try “New keyboard”" autocomplete="off" required>
+                    <button id="submitBtn" type="submit">Add item</button>
+                </div>
+                <p class="helper-text">Press Enter to submit • Items appear at the top</p>
+                <p class="form-feedback" id="formFeedback" role="status"></p>
+            </form>
+        </section>
+
+        <section class="panel card list-panel">
+            <header class="panel-header">
+                <div>
+                    <h2>Current items</h2>
+                    <p class="subtle">Auto-refreshes after every change</p>
+                </div>
+                <span class="badge" id="itemCount">0</span>
+            </header>
+            <div class="table-wrapper">
+                <table id="itemsTable">
+                    <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Item</th>
+                            <th scope="col" class="actions-col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="empty-state" id="emptyState">
+                    <h3>No items yet</h3>
+                    <p>Use the form above to add your first record.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>CRUD demo · Vanilla PHP + fetch · Built for quick experiments</p>
+    </footer>
+
+    <script>
+    const API = {
+        read: 'backend.php?action=read',
+        create: 'backend.php?action=create',
+        delete: id => `backend.php?action=delete&id=${id}`
+    };
+
+    const tableBody = document.querySelector('#itemsTable tbody');
+    const emptyState = document.getElementById('emptyState');
+    const itemCount = document.getElementById('itemCount');
+    const itemForm = document.getElementById('itemForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const formFeedback = document.getElementById('formFeedback');
+
+    async function fetchItems() {
+        toggleLoading(true);
+        try {
+            const response = await fetch(API.read);
+            const data = await response.json();
+            renderItems(data);
+        } catch (error) {
+            showFeedback('Unable to fetch items. Please refresh.', 'error');
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    function renderItems(items) {
+        tableBody.innerHTML = '';
+        if (!items.length) {
+            emptyState.hidden = false;
+            itemCount.textContent = '0';
+            return;
+        }
+
+        emptyState.hidden = true;
+        itemCount.textContent = items.length;
+
+        items.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.id}</td>
+                <td>${item.name}</td>
+                <td class="actions">
+                    <button class="ghost danger" data-delete="${item.id}">Delete</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+        const formData = new FormData(itemForm);
+        const name = formData.get('name').trim();
+
+        if (!name) {
+            showFeedback('Please enter a name before submitting.', 'error');
+            return;
+        }
+
+        toggleLoading(true);
+        try {
+            await fetch(API.create, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ name }).toString()
+            });
+            itemForm.reset();
+            showFeedback('Item added successfully.', 'success');
+            fetchItems();
+        } catch (error) {
+            showFeedback('Unable to add the item. Try again.', 'error');
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    async function handleDelete(id) {
+        toggleLoading(true);
+        try {
+            await fetch(API.delete(id));
+            showFeedback('Item deleted.', 'success');
+            fetchItems();
+        } catch (error) {
+            showFeedback('Unable to delete the item.', 'error');
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    function showFeedback(message, type) {
+        formFeedback.textContent = message;
+        formFeedback.dataset.state = type;
+        formFeedback.hidden = !message;
+    }
+
+    function toggleLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+        submitBtn.textContent = isLoading ? 'Working...' : 'Add item';
+    }
+
+    tableBody.addEventListener('click', event => {
+        const deleteId = event.target.getAttribute('data-delete');
+        if (deleteId) {
+            handleDelete(deleteId);
+        }
+    });
+
+    itemForm.addEventListener('submit', handleSubmit);
+    fetchItems();
+    </script>
+</body>
+</html>

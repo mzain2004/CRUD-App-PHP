@@ -1,0 +1,36 @@
+# OS artifacts
+.DS_Store
+Thumbs.db
+Ehthumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Dependencies & builds
+vendor/
+node_modules/
+dist/
+build/
+coverage/
+
+# Environment & secrets
+.env
+.env.*
+*.key
+*.pem
+*.crt
+
+# Logs & caches
+*.log
+*.cache
+.phpunit.result.cache
+
+# Database dumps
+*.sql
+*.sqlite
+
+# Uploads or runtime generated files
+public/storage
+storage/
